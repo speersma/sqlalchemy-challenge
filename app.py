@@ -6,7 +6,7 @@ import datetime as dt
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
-from flask import Flase, jsonify
+from flask import Flask, jsonify
 
 
 #################################################
@@ -98,3 +98,27 @@ def station():
     # return a JSON list of stations
     return jsonify(station_list)
 
+@app.route("/api/v1.0/tobs")
+def tobs():
+
+    session = Session(engine)
+
+    # query the dates and temperature of the omst active station...
+    #...for the previous year of data
+    most_recent_date = session.query(measurement.date).order_by(measurement.date.desc()).first()
+    end_date = dt.datetime.strptime(most_recent_date[0], "%Y-%m-%d").date()
+    start_date = end_date - dt.timedelta(days=365)
+    last_year_data = session.query(measurement.date, measurement.tobs).filter(measurement.date >= '2017-08-23').filter(measurement.station == 'USC00519281').all()
+
+    # close the session
+    session.close()
+
+    # convert query into list of tobs
+    tobs_list = []
+    for date, tobs in last_year_data:
+        tobs_dict = {}
+        tobs_dict['date'] = date
+        tobs_dict['tobs'] = tobs
+        tobs_list.append(tobs_dict)
+
+    return jsonify(tobs_list)
